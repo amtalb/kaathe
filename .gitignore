@@ -1,0 +1,7 @@
+__pycache__
+.python-version
+.vscode
+llama-2-7b*
+poetry.lock
+.env
+data/*
