@@ -73,6 +73,7 @@ class KaatheData:
         return ret_str.replace("\xa0", " ")
 
     def _save_to_disk(self, data, file_path: str = "./data") -> None:
+        print("Saving to disk")
         if type(data) == Dataset:
             data.drop_index("embeddings")
             data.save_to_disk(file_path + "/dataset.hf")
@@ -85,10 +86,12 @@ class KaatheData:
                         f.write(doc)
 
     def _convert_to_dataset(self, docs: list[str]) -> Dataset:
+        print("Converting to dataset")
         dataset = Dataset.from_dict({"text": docs})
         return dataset
 
     def _add_embeddings_to_dataset(self, dataset: Dataset) -> Dataset:
+        print("Adding embeddings")
         return self._embed_model.embed_dataset(dataset)
 
     def _download_documents(self) -> list[str]:
@@ -102,16 +105,26 @@ class KaatheData:
             self.ARMOR_URL,
             self.UPGRADES_URL,
         ]:
-            pages = pool.submit(self._get_page_urls(url, remove_dmg_table=True))
+            print(f"Downloading pages from {url}")
+            pages_future = pool.submit(self._get_page_urls, url, True)
+            pages = pages_future.result()
+
             pages.append(url)
             for page in pages:
-                equipment_docs.append(pool.submit(self._get_page_contents(page)))
+                print(f"Downloading page info from {page}")
+                doc_future = pool.submit(self._get_page_contents, page)
+                equipment_docs.append(doc_future.result())
 
         for url in [self.MAGIC_URL, self.RINGS_URL, self.ITEMS_URL]:
-            pages = pool.submit(self._get_page_urls(url))
+            print(f"Downloading pages from {url}")
+            pages_future = pool.submit(self._get_page_urls, url)
+            pages = pages_future.result()
+
             pages.append(url)
             for page in pages:
-                equipment_docs.append(pool.submit(self._get_page_contents(page)))
+                print(f"Downloading page info from {page}")
+                doc_future = pool.submit(self._get_page_contents, page)
+                equipment_docs.append(doc_future.result())
 
         # wait for all tasks to complete
         pool.shutdown(wait=True)
